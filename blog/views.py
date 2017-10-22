@@ -5,8 +5,9 @@ from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView
 from django.template import Context
 from .models import Post, Comment
-from .forms import EmailPostForm, CommentForm
 from taggit.models import Tag
+from .forms import EmailPostForm, CommentForm, SearchForm
+from haystack.query import SearchQuerySet
 
 
 def post_list(request, tag_slug=None):
@@ -28,8 +29,10 @@ def post_list(request, tag_slug=None):
     except EmptyPage:
     # If page is out of range deliver last page of results
         posts = paginator.page(paginator.num_pages)
-        ctx = {'page':page, 'posts': posts, 'tag': tag}
-    return render(request, 'blog/post/list.html', ctx)
+        # ctx = {'page':page, 'posts': posts, 'tag': tag}
+    return render(request, 'blog/post/list.html',
+                  {'page':page, 'posts': posts, 'tag': tag}
+                  )
 
 # class PostListView(ListView):
 #     queryset = Post.published.all()
@@ -60,7 +63,8 @@ def post_detail(request, year, month, day, post):
     .exclude(id=post.id)
     similar_posts = similar_posts.annotate(same_tags=Count('tags'))\
     .order_by('-same_tags','-publish')[:4]
-    ctx = {'post': post, 'comments': comments, 'comment_form': comment_form, 'similar_posts': similar_posts})
+    ctx = {'post': post, 'comments': comments, 'comment_form': comment_form,
+           'similar_posts': similar_posts}
     return render(request, 'blog/post/detail.html', ctx)
 
 def post_share(request, post_id):
@@ -84,3 +88,18 @@ def post_share(request, post_id):
         form = EmailPostForm()
         context = {'post': post, 'form': form, 'sent': sent}
     return render(request, 'blog/post/share.html', context)
+
+def post_search(request):
+    form = SearchForm()
+    if 'query' in request.GET:
+        form = SearchForm(request.GET)
+        if form.is_valid():
+            cd = form.cleaned_data
+            results = SearchQuerySet().models(Post).filter(content=cd['query']).load_all()
+            # count total results
+            total_results = results.count()
+        return render(request, 'blog/post/search.html',
+                  {'form':form,
+                   'cd':cd,
+                   'results':results,
+                   'total_results':total_results})

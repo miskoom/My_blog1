@@ -31,11 +31,10 @@
 
 	{% for comment in comments %}
 	<div class="comment">
-		<p class="info">
-			Comment {{ forloop.counter }} by {{ comment.name }}
+		<p class="info"> Comment {{ forloop.counter }} by {{ comment.name }}
 			{{ comment.created }}
 		</p>
-		{{ comment.body|linebreaks }}
+		{{ comment.body|markdown }}
 	</div>
 	{% empty %}
 		<p>There are no comments yet.</p>
